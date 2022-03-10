@@ -14,10 +14,10 @@ class Layer:
         if self.activation == 'linear':
             return np.dot(self.X, self.weights)
 
-    def backward(self, previous_layer_derivative, learning_rate=10e-3):
+    def backward(self, previous_layer_derivative, learning_rate=1e-2):
         if self.activation == 'linear':
-            self.weights += np.dot(self.X.T, previous_layer_derivative)
-            return np.dot(previous_layer_derivative, self.weights[1:, :])
+            self.weights += np.dot(self.X.T, previous_layer_derivative)/self.X.shape[0]*learning_rate
+            return np.dot(previous_layer_derivative, self.weights[1:, :])/self.X.shape[0]
 
 
 class Network:
@@ -37,8 +37,11 @@ class Network:
 
     def train(self, inputs, y, epochs=1):
         for i in range(epochs):
-            self.loss.append(np.sum(np.square(y - self.forward(inputs))))
+            self.loss.append(np.sum(np.square(y - self.forward(inputs)))/inputs.size)
             self.backward(2*(y - self.forward(inputs)))
+
+    def predict(self, X): 
+        return self.forward(X)
 
     def graph_loss(self): 
         plt.plot(range(len(self.loss)), self.loss)
@@ -49,5 +52,10 @@ x = np.array([[1], [2], [3], [4], [5]])
 y = np.array([[2], [4], [6], [8], [10]])
 
 m = Network([Layer(1, 1)])
-m.train(x, y, 10)
+print(m.layers[0].weights)
+m.train(x, y, 100)
 m.graph_loss()
+plt.plot(x, y)
+plt.plot(x, m.predict(x))
+plt.show()
+print(m.layers[0].weights)
