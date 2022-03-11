@@ -36,7 +36,7 @@ class Layer:
 
     def backward(self, previous_layer_derivative, learning_rate):
         self.weights += np.dot(self.X.T, previous_layer_derivative*self.activation.backward())/self.X.shape[0]*learning_rate
-        return np.dot(previous_layer_derivative*self.activation.backward(), self.weights[1:, :])/self.X.shape[0]
+        return np.dot(previous_layer_derivative*self.activation.backward(), self.weights[1:, :].T)/self.X.shape[0]
             
 
 
@@ -52,7 +52,7 @@ class Network:
         return x
     
     def backward(self, previous_layer_derivative, learning_rate):
-        for layer in self.layers:
+        for layer in reversed(self.layers):
             previous_layer_derivative = layer.backward(previous_layer_derivative, learning_rate)
 
     def train(self, inputs, y, epochs=1, learning_rate=1e-2):
@@ -72,17 +72,16 @@ class Network:
 
 
 x = np.array([[1], [2], [3], [4], [5]])
-y = np.array([[20], [40], [60], [80], [100]])
+y = np.array([[20], [45], [66], [88], [112]])
 
-m = Network([Layer(1, 1)])
+m = Network([Layer(1, 1), Layer(1, 1)])
 def lr(x):
-    if x%50 != 0:
-        return 1e-3
-    else: 
-        return 1e-1
+    if x%25 == 0 or x%45 == 0 or x%66 == 0 or x%88 == 0:
+        return 1
+    return 1e-3
+        
 m.train(x, y, 500, learning_rate=lr)
 m.graph_loss()
 plt.plot(x, y)
 plt.plot(x, m.predict(x))
 plt.show()
-print(m.layers[0].weights)
