@@ -74,17 +74,21 @@ class Network:
 
     def train(self, inputs, y, epochs=1, learning_rate=1e-2, batch_size=None):
         lr = learning_rate
-        batch_size = batch_size if batch_size is not None else inputs.shape[0]
+        batch_size = batch_size if type(batch_size) is int and batch_size > 0 else inputs.shape[0]
         for epoch in range(1, epochs+1):
             if not type(lr) is int and not type(lr) is float:
                 lr = learning_rate(epoch)
 
-            for i in range(np.floor(inputs.shape[0]/batch_size)):
-                self.loss.append(np.sum(np.square(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])))/y[i*batch_size:(i+1)*batch_size].size)
+            loss_ = 0
+
+            for i in range(int(inputs.shape[0]/batch_size)):
+                loss_ += np.sum(np.square(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])))
                 self.backward(2*(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])), learning_rate=lr)
             if inputs.shape[0]%batch_size != 0:
-                self.loss.append(np.sum(np.square(y[-(inputs.shape[0]%batch_size):] - self.forward(inputs[-(inputs.shape[0]%batch_size):])))/y[-(inputs.shape[0]%batch_size):].size)
-                self.backward(2*(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])), learning_rate=lr)
+                loss_ += np.sum(np.square(y[-(inputs.shape[0]%batch_size):] - self.forward(inputs[-(inputs.shape[0]%batch_size):])))
+                self.backward(2*(y[-(inputs.shape[0]%batch_size):] - self.forward(inputs[-(inputs.shape[0]%batch_size):])), learning_rate=lr)
+
+            self.loss.append(loss_/inputs.shape[0])
 
     def predict(self, X): 
         return self.forward(X)
