@@ -20,7 +20,7 @@ class Sigmoid:
         self.X = 0
     
     def __str__(self):
-        return "Sigmoid"
+        return "sigmoid"
 
     def forward(self, X):
         self.X = X
@@ -30,7 +30,6 @@ class Sigmoid:
         return (1/(1+np.exp(-self.X)))*(1-(1/(1+np.exp(-(self.X)))))
 
 class Layer:
-    # Takes number of inputs from previous layer and number of neurons for this layer
     def __init__(self, n_input, n_neurons, activation=Linear()):
         self.weights = np.random.randn(n_input+1, n_neurons)
         self.X = 0
@@ -52,7 +51,6 @@ class Layer:
 
 
 class Network:
-    # Takes list of layers
     def __init__(self, layers=[], loss='mean_squared_error'):
         self.layers = layers
         self.loss = []
@@ -74,17 +72,20 @@ class Network:
         for layer in reversed(self.layers):
             previous_layer_derivative = layer.backward(previous_layer_derivative, learning_rate)
 
-    def train(self, inputs, y, epochs=1, learning_rate=1e-2):
+    def train(self, inputs, y, epochs=1, learning_rate=1e-2, batch_size=None):
         lr = learning_rate
+        batch_size = batch_size if batch_size is not None else inputs.shape[0]
         for epoch in range(1, epochs+1):
             if not type(lr) is int and not type(lr) is float:
                 lr = learning_rate(epoch)
-            self.loss.append(np.sum(np.square(y - self.forward(inputs)))/inputs.size)
-            self.backward(2*(y - self.forward(inputs)), learning_rate=lr)
+
+            for i in range(np.floor(inputs.shape[0]/batch_size)):
+                self.loss.append(np.sum(np.square(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])))/y[i*batch_size:(i+1)*batch_size].size)
+                self.backward(2*(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])), learning_rate=lr)
+            if inputs.shape[0]%batch_size != 0:
+                self.loss.append(np.sum(np.square(y[-(inputs.shape[0]%batch_size):] - self.forward(inputs[-(inputs.shape[0]%batch_size):])))/y[-(inputs.shape[0]%batch_size):].size)
+                self.backward(2*(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])), learning_rate=lr)
 
     def predict(self, X): 
         return self.forward(X)
 
-    def graph_loss(self): 
-        plt.plot(range(len(self.loss)), self.loss)
-        plt.show()
