@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -29,6 +30,28 @@ class Sigmoid:
     def backward(self):
         return (1/(1+np.exp(-self.X)))*(1-(1/(1+np.exp(-(self.X)))))
 
+class Relu:
+    def __init__(self):
+        self.X = 0
+
+    def forward(self, X):
+        self.X = X
+        return np.where(X > 0, X, 0)
+
+    def backward(self):
+        return np.where(self.X > 0, 1, 0)
+
+class Sine:
+    def __init__(self):
+        self.X = 0
+
+    def forward(self, X):
+        self.X = X
+        return np.sin(X)
+
+    def backward(self):
+        return np.cos(self.X)
+
 class Layer:
     def __init__(self, n_input, n_neurons, activation=Linear()):
         self.weights = np.random.randn(n_input+1, n_neurons)
@@ -40,7 +63,6 @@ class Layer:
         return f"{self.name} has {self.weights.shape[0]} inputs and {self.weights.shape[1]} outputs which totals {self.weights.size} weights and applies {self.activation} activation"
 
     def forward(self, x):
-        #x=examples, inputs    w=number of inputs, neurons
         self.X = np.concatenate([np.ones((x.shape[0],1)), x], axis=1)
         return self.activation.forward(np.dot(self.X, self.weights))
 
@@ -48,7 +70,6 @@ class Layer:
         self.weights += np.dot(self.X.T, previous_layer_derivative*self.activation.backward())/self.X.shape[0]*learning_rate
         return np.dot(previous_layer_derivative*self.activation.backward(), self.weights[1:, :].T)/self.X.shape[0]
             
-
 
 class Network:
     def __init__(self, layers=[], loss='mean_squared_error'):
