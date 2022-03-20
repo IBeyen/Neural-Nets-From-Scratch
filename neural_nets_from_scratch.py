@@ -1,4 +1,3 @@
-import re
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -34,6 +33,9 @@ class Relu:
     def __init__(self):
         self.X = 0
 
+    def __str__(self):
+        return "relu"
+
     def forward(self, X):
         self.X = X
         return np.where(X > 0, X, 0)
@@ -45,12 +47,28 @@ class Sine:
     def __init__(self):
         self.X = 0
 
+    def __str__(self):
+        return "sine"
+
     def forward(self, X):
         self.X = X
         return np.sin(X)
 
     def backward(self):
         return np.cos(self.X)
+
+class MSE:
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "mean squared error"
+
+    def forward(self, y, y_hat):
+        return np.square(y - y_hat)
+
+    def backward(self, y, y_hat):
+        return 2*(y - y_hat)
 
 class Layer:
     def __init__(self, n_input, n_neurons, activation=Linear()):
@@ -67,19 +85,20 @@ class Layer:
         return self.activation.forward(np.dot(self.X, self.weights))
 
     def backward(self, previous_layer_derivative, learning_rate):
-        self.weights += np.dot(self.X.T, previous_layer_derivative*self.activation.backward())/self.X.shape[0]*learning_rate
-        return np.dot(previous_layer_derivative*self.activation.backward(), self.weights[1:, :].T)/self.X.shape[0]
+        self.weights += np.dot(self.X.T, previous_layer_derivative*self.activation.backward())*learning_rate/self.X.shape[0]
+        return np.dot(previous_layer_derivative*self.activation.backward(), self.weights[1:, :].T)
             
 
 class Network:
-    def __init__(self, layers=[], loss='mean_squared_error'):
+    def __init__(self, layers=[], loss=MSE()):
         self.layers = layers
         self.loss = []
+        self.loss_func = loss
         for epoch, layer in enumerate(self.layers):
             layer.name = "Layer_" + str(epoch)
     
     def __str__(self):
-        string = ""
+        string = f"Model with {len(self.layers)} layers and {self.loss_func} loss function\n"
         for layer in self.layers:
             string += f"{layer} \n"
         return string
@@ -103,11 +122,11 @@ class Network:
             loss_ = 0
 
             for i in range(int(inputs.shape[0]/batch_size)):
-                loss_ += np.sum(np.square(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])))
-                self.backward(2*(y[i*batch_size:(i+1)*batch_size] - self.forward(inputs[i*batch_size:(i+1)*batch_size])), learning_rate=lr)
+                loss_ += np.sum(self.loss_func.forward(y=y[i*batch_size:(i+1)*batch_size], y_hat=self.forward(inputs[i*batch_size:(i+1)*batch_size])))
+                self.backward(self.loss_func.backward(y=y[i*batch_size:(i+1)*batch_size], y_hat=inputs[i*batch_size:(i+1)*batch_size]), learning_rate=lr)
             if inputs.shape[0]%batch_size != 0:
-                loss_ += np.sum(np.square(y[-(inputs.shape[0]%batch_size):] - self.forward(inputs[-(inputs.shape[0]%batch_size):])))
-                self.backward(2*(y[-(inputs.shape[0]%batch_size):] - self.forward(inputs[-(inputs.shape[0]%batch_size):])), learning_rate=lr)
+                loss_ += np.sum(self.loss_func.forward(y=y[-(inputs.shape[0]%batch_size):], y_hat=self.forward(inputs[-(inputs.shape[0]%batch_size):])))
+                self.backward(self.loss_func.backward(y=y[-(inputs.shape[0]%batch_size):], y_hat=self.forward(inputs[-(inputs.shape[0]%batch_size):])), learning_rate=lr)
 
             self.loss.append(loss_/inputs.shape[0])
 
