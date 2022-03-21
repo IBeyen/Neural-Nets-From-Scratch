@@ -1,81 +1,16 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from activation_functions import *
+from loss_functions import *
+from optimizers import *
 
-class Linear:
-    def __init__(self):
-        self.X = 0
-
-    def __str__(self):
-        return 'no'
-    
-    def forward(self, X):
-        self.X = X
-        return self.X
-    
-    def backward(self):
-        return 1
-
-class Sigmoid:
-    def __init__(self):
-        self.X = 0
-    
-    def __str__(self):
-        return "sigmoid"
-
-    def forward(self, X):
-        self.X = X
-        return 1/(1+np.exp(-self.X))
-    
-    def backward(self):
-        return (1/(1+np.exp(-self.X)))*(1-(1/(1+np.exp(-(self.X)))))
-
-class Relu:
-    def __init__(self):
-        self.X = 0
-
-    def __str__(self):
-        return "relu"
-
-    def forward(self, X):
-        self.X = X
-        return np.where(X > 0, X, 0)
-
-    def backward(self):
-        return np.where(self.X > 0, 1, 0)
-
-class Sine:
-    def __init__(self):
-        self.X = 0
-
-    def __str__(self):
-        return "sine"
-
-    def forward(self, X):
-        self.X = X
-        return np.sin(X)
-
-    def backward(self):
-        return np.cos(self.X)
-
-class MSE:
-    def __init__(self):
-        pass
-
-    def __str__(self):
-        return "mean squared error"
-
-    def forward(self, y, y_hat):
-        return np.square(y - y_hat)
-
-    def backward(self, y, y_hat):
-        return 2*(y - y_hat)
 
 class Layer:
-    def __init__(self, n_input, n_neurons, activation=Linear()):
-        self.weights = np.random.randn(n_input+1, n_neurons)
+    def __init__(self, n_input, n_neurons, activation=Linear(), optimizer=None):
+        self.weights = np.random.uniform(-1, 1, (n_input+1, n_neurons))
         self.X = 0
         self.activation = activation
         self.name = ''
+        self.optimizer = optimizer
 
     def __str__(self):
         return f"{self.name} has {self.weights.shape[0]} inputs and {self.weights.shape[1]} outputs which totals {self.weights.size} weights and applies {self.activation} activation"
@@ -85,20 +20,24 @@ class Layer:
         return self.activation.forward(np.dot(self.X, self.weights))
 
     def backward(self, previous_layer_derivative, learning_rate):
-        self.weights += np.dot(self.X.T, previous_layer_derivative*self.activation.backward())*learning_rate/self.X.shape[0]
+        self.weights += self.optimizer(np.dot(self.X.T, previous_layer_derivative*self.activation.backward()))*learning_rate/self.X.shape[0]
         return np.dot(previous_layer_derivative*self.activation.backward(), self.weights[1:, :].T)
             
 
 class Network:
-    def __init__(self, layers=[], loss=MSE()):
+    def __init__(self, layers=[], loss=MSE(), optimizer=SGD()):
         self.layers = layers
         self.loss = []
         self.loss_func = loss
-        for epoch, layer in enumerate(self.layers):
-            layer.name = "Layer_" + str(epoch)
+        self.optimizer = optimizer
+        for i, layer in enumerate(self.layers):
+            if layer.name == "":
+                layer.name = "Layer_" + str(i)
+            if layer.optimizer is None:
+                layer.optimizer = optimizer.new()
     
     def __str__(self):
-        string = f"Model with {len(self.layers)} layers and {self.loss_func} loss function\n"
+        string = f"Model with {len(self.layers)} layers and {self.loss_func} loss function and {self.optimizer} optimizer\n"
         for layer in self.layers:
             string += f"{layer} \n"
         return string
