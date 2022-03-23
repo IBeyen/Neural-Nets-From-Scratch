@@ -2,15 +2,16 @@ import numpy as np
 from activation_functions import *
 from loss_functions import *
 from optimizers import *
-
+from regularizers import *
 
 class Layer:
-    def __init__(self, n_input, n_neurons, activation=Linear(), optimizer=None, *args):
+    def __init__(self, n_input, n_neurons, activation=Linear(), optimizer=None, regularizer=None, *args):
         self.weights = np.random.uniform(-1, 1, (n_input+1, n_neurons))
         self.X = 0
         self.activation = activation
         self.name = ''
         self.optimizer = optimizer
+        self.regularizer = regularizer
 
     def __str__(self):
         return f"{self.name} has {self.weights.shape[0]} inputs and {self.weights.shape[1]} neurons which totals {self.weights.size} weights and applies {self.activation} activation"
@@ -20,7 +21,11 @@ class Layer:
         return self.activation.forward(np.dot(self.X, self.weights))
 
     def backward(self, previous_layer_derivative, learning_rate):
-        self.weights += self.optimizer(np.dot(self.X.T, previous_layer_derivative*self.activation.backward()))*learning_rate/self.X.shape[0]
+        if self.regularizer is None:
+            self.weights += self.optimizer(np.dot(self.X.T, previous_layer_derivative*self.activation.backward()))*learning_rate/self.X.shape[0]
+        else:
+            self.weights += self.optimizer(np.dot(self.X.T, previous_layer_derivative*self.activation.backward()))*learning_rate/self.X.shape[0] - self.regularizer(self.weights)
+
         return np.dot(previous_layer_derivative*self.activation.backward(), self.weights[1:, :].T)
             
 
@@ -36,9 +41,9 @@ class Dropout:
         return f"Dropout with rate {self.drop_rate}"
 
     def forward(self, X, **kwargs):
-        for x in kwargs:
-            if x == 'training':
-                if kwargs[x] == True:
+        for karg in kwargs:
+            if karg == 'training':
+                if kwargs[karg] == True:
                     return X * np.where(np.random.random(X.shape) > self.drop_rate, 1, 0)
         return X
 
@@ -85,7 +90,8 @@ class Network:
                 if not type(lr) is int and not type(lr) is float:
                     lr = learning_rate(epoch)
 
-
+                p = np.random.permutation(inputs.shape[0])
+                inputs, y = inputs[p], y[p]
                 loss_ = 0
 
                 for i in range(int(inputs.shape[0]/batch_size)):
