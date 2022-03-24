@@ -95,11 +95,13 @@ class Network:
                 loss_ = 0
 
                 for i in range(int(inputs.shape[0]/batch_size)):
-                    loss_ += np.sum(self.loss_func.forward(y=y[i*batch_size:(i+1)*batch_size], y_hat=self.forward(inputs[i*batch_size:(i+1)*batch_size])))
-                    self.backward(self.loss_func.backward(y=y[i*batch_size:(i+1)*batch_size], y_hat=inputs[i*batch_size:(i+1)*batch_size]), learning_rate=lr)
+                    y_hat = self.forward(inputs[i*batch_size:(i+1)*batch_size])
+                    loss_ += np.sum(self.loss_func.forward(y=y[i*batch_size:(i+1)*batch_size], y_hat=y_hat))
+                    self.backward(self.loss_func.backward(y=y[i*batch_size:(i+1)*batch_size], y_hat=y_hat), learning_rate=lr)
                 if inputs.shape[0]%batch_size != 0:
-                    loss_ += np.sum(self.loss_func.forward(y=y[-(inputs.shape[0]%batch_size):], y_hat=self.forward(inputs[-(inputs.shape[0]%batch_size):])))
-                    self.backward(self.loss_func.backward(y=y[-(inputs.shape[0]%batch_size):], y_hat=self.forward(inputs[-(inputs.shape[0]%batch_size):])), learning_rate=lr)
+                    y_hat = self.forward(inputs[-(inputs.shape[0]%batch_size):])
+                    loss_ += np.sum(self.loss_func.forward(y=y[-(inputs.shape[0]%batch_size):], y_hat=y_hat))
+                    self.backward(self.loss_func.backward(y=y[-(inputs.shape[0]%batch_size):], y_hat=y_hat), learning_rate=lr)
 
                 self.loss.append(loss_/inputs.shape[0])
 
