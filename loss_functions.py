@@ -29,4 +29,4 @@ class MAE:
         return np.absolute(y - y_hat)
 
     def backward(self, y, y_hat):
-        return np.where(y_hat >= y, 1, -1)
+        return np.where(y_hat >= y, -1, 1)
